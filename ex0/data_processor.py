@@ -18,7 +18,7 @@ class DataProcessor(ABC):
         return [numeric: int, string: str]
     pass
 
-
+#abobrinha
 class NumericProcessor(DataProcessor):
     def validate(self, data: Any) -> bool:
         if isinstance(data, int | float | list[int | float]):
