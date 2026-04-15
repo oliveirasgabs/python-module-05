@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Any
+from typing import Any, Protocol
 
 
 class DataProcessor(ABC):
@@ -105,6 +105,28 @@ class LogProcessor(DataProcessor):
             self._total_processed += 1
 
 
+class ExportPlugin(Protocol):
+    def process_output(self, data: tuple[int, str]) -> None:
+        ...
+
+
+class CSVExportPlugin:
+    def process_output(self, data: list[tuple[int, str]]) -> None:
+        if not data:
+            return
+        csv_str = ",".join(val for rank, val in data)
+        print(f"CSV Output:\n{csv_str}")
+
+
+class JSONExportPlugin:
+    def process_output(self, data: list[tuple[int, str]]) -> None:
+        if not data:
+            return
+        items = [f'"item_{rank}": "{val}"' for rank, val in data]
+        json_str = "{" + ", ".join(items) + "}"
+        print(f"JSON Output:\n{json_str}")
+
+
 class DataStream:
     def __init__(self) -> None:
         self._processors: list[DataProcessor] = []
@@ -135,53 +157,44 @@ class DataStream:
             print(f"{name}: total {proc.total_processed()} items processed, "
                   f"remaining {proc.remaining()} on processor")
 
+    def output_pipeline(self, nb: int, plugin: ExportPlugin) -> None:
+        for proc in self._processors:
+            to_export: list[tuple[int, str]] = []
+            for _ in range(nb):
+                try:
+                    to_export.append(proc.output())
+                except IndexError:
+                    break
+            if to_export:
+                plugin.process_output(to_export)
+
 
 def main() -> None:
-    print("=== Code Nexus - Data Stream ===")
-    print("Initialize Data Stream...")
-    ds: DataStream = DataStream()
+    print("=== Code Nexus - Data Pipeline ===")
+    ds = DataStream()
     ds.print_processors_stats()
 
-    print("\nRegistering Numeric Processor")
-    num_proc: NumericProcessor = NumericProcessor()
-    ds.register_processor(num_proc)
+    print("\nRegistering Processors")
+    ds.register_processor(NumericProcessor())
+    ds.register_processor(TextProcessor())
+    ds.register_processor(LogProcessor())
 
-    batch: list[Any] = [
-        'Hello world',
-        [3.14, -1, 2.71],
-        [
-            {'log_level': 'WARNING',
-             'log_message': 'Telnet access! Use ssh instead'},
-            {'log_level': 'INFO',
-             'log_message': 'User wil is connected'}
-        ],
-        42,
-        ['Hi', 'five']
-    ]
-
-    print("Send first batch of data on stream:", batch)
-    ds.process_stream(batch)
+    batch1 = ['Hello world', [3.14, -1, 2.71], [{'log_level': 'WARNING', 'log_message': 'Telnet access! Use ssh instead'}, {'log_level': 'INFO', 'log_message': 'User wil is connected'}], 42, ['Hi', 'five']]
+    print(f"Send first batch of data on stream: {batch1}")
+    ds.process_stream(batch1)
     ds.print_processors_stats()
 
-    print("\nRegistering other data processors")
-    text_proc: TextProcessor = TextProcessor()
-    log_proc: LogProcessor = LogProcessor()
-    ds.register_processor(text_proc)
-    ds.register_processor(log_proc)
-
-    print("Send the same batch again")
-    ds.process_stream(batch)
+    print("\nSend 3 processed data from each processor to a CSV plugin:")
+    ds.output_pipeline(3, CSVExportPlugin())
     ds.print_processors_stats()
 
-    print("\nConsume some elements from the data "
-          "processors: Numeric 3, Text 2, Log 1")
-    for _ in range(3):
-        num_proc.output()
-    for _ in range(2):
-        text_proc.output()
-    for _ in range(1):
-        log_proc.output()
+    print("\nSend another batch of data...")
+    batch2 = [21, ['I love AI', 'LLMs are wonderful', 'Stay healthy'], [{'log_level': 'ERROR', 'log_message': '500 server crash'}, {'log_level': 'NOTICE', 'log_message': 'Certificate expires in 10 days'}], [32, 42, 64, 84, 128, 168], 'World hello']
+    ds.process_stream(batch2)
+    ds.print_processors_stats()
 
+    print("\nSend 5 processed data from each processor to a JSON plugin:")
+    ds.output_pipeline(5, JSONExportPlugin())
     ds.print_processors_stats()
 
 
