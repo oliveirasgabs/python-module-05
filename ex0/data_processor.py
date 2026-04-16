@@ -17,7 +17,7 @@ class DataProcessor(ABC):
 
     def output(self) -> tuple[int, str]:
         if not self._buffer:
-            raise ValueError("Buffer is empty")
+            raise IndexError("Buffer is empty")
         return self._buffer.pop(0)
 
 
@@ -108,6 +108,13 @@ def main() -> None:
     except TypeError as error:
         print(f"Got exception: {error}")
 
+    # try:
+    #     print("\nTest invalid ingestion of string "
+    #           "'None' without prior validation:")
+    #     num_processor.ingest(None)
+    # except TypeError as error:
+    #     print(f"Got exception: {error}")
+
     num_data: list[int | float] = [1, 2, 3, 4, 5]
     print(f"Processing data: {num_data}")
     num_processor.ingest(num_data)
@@ -117,6 +124,16 @@ def main() -> None:
         value: str
         i, value = num_processor.output()
         print(f"Numeric value {i}: {value}")
+
+    # empty_list: list[int] = []
+    # print(f"\nTrying to validate empty list: "
+    #       f"{num_processor.validate(empty_list)}")
+    # print("\nTrying to ingest empty list:")
+    # try:
+    #     num_processor.ingest(empty_list)
+    #     num_processor.output()
+    # except IndexError as error:
+    #     print(f"Got exception: {error}")
 
     print("\nTesting Text Processor...")
     text_proc: TextProcessor = TextProcessor()

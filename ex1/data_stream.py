@@ -18,7 +18,7 @@ class DataProcessor(ABC):
 
     def output(self) -> tuple[int, str]:
         if not self._buffer:
-            raise ValueError("Buffer is empty")
+            raise IndexError("Buffer is empty")
         return self._buffer.pop(0)
 
     def total_processed(self) -> int:
